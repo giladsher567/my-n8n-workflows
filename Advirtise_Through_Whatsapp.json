@@ -1,0 +1,178 @@
+{
+  "name": "Advirtise Through Whatsapp",
+  "nodes": [
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        80
+      ],
+      "id": "8765c992-2468-4743-9732-1398881da25b",
+      "name": "When clicking ‘Execute workflow’"
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1aNOTeR4wXrn4aSz5oz9Q5f6HGS8vyaD_nNwaV94V-BU",
+          "mode": "list",
+          "cachedResultName": "WA-EXTRACTOR-ערוץ היזמים_ת_1751307966101",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aNOTeR4wXrn4aSz5oz9Q5f6HGS8vyaD_nNwaV94V-BU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 500209737,
+          "mode": "list",
+          "cachedResultName": "personalized_messages_pilot",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aNOTeR4wXrn4aSz5oz9Q5f6HGS8vyaD_nNwaV94V-BU/edit#gid=500209737"
+        },
+        "filtersUI": {
+          "values": [
+            {
+              "lookupColumn": "sent"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        260,
+        0
+      ],
+      "id": "20cd7937-325d-42de-a932-7bc29729b587",
+      "name": "Get Whatsapp Name",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "l54UtEa1PCvJ67Rb",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "documentId": {
+          "__rl": true,
+          "value": "1aNOTeR4wXrn4aSz5oz9Q5f6HGS8vyaD_nNwaV94V-BU",
+          "mode": "list",
+          "cachedResultName": "WA-EXTRACTOR-ערוץ היזמים_ת_1751307966101",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aNOTeR4wXrn4aSz5oz9Q5f6HGS8vyaD_nNwaV94V-BU/edit?usp=drivesdk"
+        },
+        "sheetName": {
+          "__rl": true,
+          "value": 1713468992,
+          "mode": "list",
+          "cachedResultName": "Message_Versions",
+          "cachedResultUrl": "https://docs.google.com/spreadsheets/d/1aNOTeR4wXrn4aSz5oz9Q5f6HGS8vyaD_nNwaV94V-BU/edit#gid=1713468992"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleSheets",
+      "typeVersion": 4.6,
+      "position": [
+        260,
+        180
+      ],
+      "id": "4b74f838-da9d-4a82-a1d5-0fa5c0d17c5b",
+      "name": "Get Message Versions from Sheet",
+      "credentials": {
+        "googleSheetsOAuth2Api": {
+          "id": "l54UtEa1PCvJ67Rb",
+          "name": "Google Sheets account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "return $input.all().map(item => {\n  const phone = item.json.cleaned_phone;\n  const text = encodeURIComponent(item.json.final_message);\n  const link = `https://wa.me/${phone}?text=${text}`;\n\n  return {\n    json: {\n      ...item.json,\n      wa_link: link\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        720,
+        80
+      ],
+      "id": "b3cd7933-a7e9-4103-a392-82e442615a4f",
+      "name": "Build WA Link"
+    },
+    {
+      "parameters": {
+        "jsCode": "const messages = $items(\"Get Message Versions from Sheet\");  // לוקח את כל ההודעות מהצומת של ההודעות\nconst recipients = $input.all();              // לוקח את כל האנשים\n\nreturn recipients.map((recipient, i) => {\n  const messageIndex = i % messages.length;   // בוחר הודעה לפי התור (כדי שכל הודעה תשלח בערך אותו מספר פעמים)\n  const selectedMessage = messages[messageIndex].json;\n\n  const custom = recipient.json.custom_message?.trim(); // אם יש הודעה מותאמת אישית – נשתמש בה\n  const text = custom !== \"\" ? custom : selectedMessage.Message_Content;\n\n  return {\n    json: {\n      ...recipient.json,                    // משמר את כל המידע על הנמען\n      message_version: selectedMessage.Version_ID,  // מוסיף את גרסת ההודעה שנבחרה\n      final_message: text                   // זה הטקסט שנשלח בפועל\n    }\n  };\n});"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        500,
+        80
+      ],
+      "id": "14b270ae-fc58-40fc-bd57-df17c3c5653f",
+      "name": "Assign Message Version"
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Get Whatsapp Name",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Get Message Versions from Sheet",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Whatsapp Name": {
+      "main": [
+        [
+          {
+            "node": "Assign Message Version",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Message Versions from Sheet": {
+      "main": [
+        [
+          {
+            "node": "Assign Message Version",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Assign Message Version": {
+      "main": [
+        [
+          {
+            "node": "Build WA Link",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "69b1934b-7348-449f-92d9-7e1343c5f15e",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "105ca4ff070cc787384ed8a3f972ab8e33ca658ad365ba0012fe218a2618e3d3"
+  },
+  "id": "aWZ3ntcJYQ2QYXju",
+  "tags": []
+}
